@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import threading
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -15,7 +14,7 @@ from aiogram.types import (
     Message,
     ReplyKeyboardMarkup,
 )
-from flask import Flask
+from aiohttp import web
 import requests
 
 # --- SOZLAMALAR ---
@@ -36,15 +35,6 @@ logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
-
-# --- FLASK WEB SERVER (Render port talabini qondirish uchun) ---
-app = Flask(__name__)
-
-
-@app.route("/")
-def home():
-  return "Bot is active and running 24/7!"
-
 
 HASHTAG = "#yozyovon_tuman_ixtisoslaştirilgan_maktabi"
 FOOTER = """💻 maktab matbuot xizmati
@@ -461,28 +451,31 @@ async def manual_channel_photo_post(message: types.Message):
     print(f"❌ Qo'lda yozilgan kanal fotosini yuborishda xato: {e}")
 
 
-# --- TELEGRAM BOTNI FONDAGI OQIMDA ISHGA TUSHIRISH ---
-def run_telegram_bot():
-  import time
-  time.sleep(3)  # Flask server portni ochib olishi uchun 3 soniya kutamiz
-  try:
-    print("🤖 Telegram botni ishga tushirish boshlandi...")
+# --- AIOHTTP WEB SERVER (PORT UCHUN) ---
+async def handle_ping(request):
+  return web.Response(text="Bot is active and running 24/7!")
 
-    async def start():
-      await bot.delete_webhook(drop_pending_updates=True)
-      print("✅ Bot polling (xabarlarni kutish) rejimiga muvaffaqiyatli o'tdi!")
-      await dp.start_polling(bot)
 
-    asyncio.run(start())
-  except Exception as e:
-    print(f"❌ TELEGRAM BOTDA XATOLIK CHIQDI: {e}")
+async def start_web_server():
+  app = web.Application()
+  app.router.add_get("/", handle_ping)
+  runner = web.AppRunner(app)
+  await runner.setup()
+  port = int(os.environ.get("PORT", 10000))
+  site = web.TCPSite(runner, "0.0.0.0", port)
+  await site.start()
+  print(f"🌐 Aiohttp web server {port}-portda ishga tushdi!")
+
+
+async def main():
+  # 1. Veb-serverni ishga tushiramiz (Render port talabini qondiradi)
+  await start_web_server()
+
+  # 2. Telegram botni polling rejimida ishga tushiramiz
+  await bot.delete_webhook(drop_pending_updates=True)
+  print("🤖 Telegram bot polling rejimiga o'tdi va ishlayapti!")
+  await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-  print("🚀 Dastur boshlandi, bot thread'i ochilmoqda...")
-  bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
-  bot_thread.start()
-
-  port = int(os.environ.get("PORT", 10000))
-  print(f"🌐 Flask server {port}-portda ishga tushirilmoqda...")
-  app.run(host="0.0.0.0", port=port)
+  asyncio.run(main())
