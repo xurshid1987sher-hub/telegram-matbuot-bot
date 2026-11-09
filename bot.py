@@ -303,7 +303,7 @@ async def process_post_text(message: Message, state: FSMContext):
               "caption": final_post,
           }
       except Exception as e:
-        logging.error(f"Admin {admin_id} ga yuborishda xato: {e}")
+        print(f"❌ Admin {admin_id} ga yuborishda xato: {e}")
 
     await message.answer(
         "✅ Post muvaffaqiyatli tayyorlandi va **adminlar ko'rigiga** yuborildi!",
@@ -312,7 +312,7 @@ async def process_post_text(message: Message, state: FSMContext):
     await state.clear()
 
   except Exception as e:
-    logging.error(f"Xatolik yuz berdi: {e}")
+    print(f"❌ Xatolik yuz berdi: {e}")
     await message.answer(
         f"❌ Xatolik yuz berdi: {e}", reply_markup=start_reply_kb
     )
@@ -417,7 +417,7 @@ async def approve_callback(callback: CallbackQuery):
               timeout=15,
           )
       except Exception as wb_err:
-        logging.error(f"Make.com webhook'ga yuborishda xatolik: {wb_err}")
+        print(f"❌ Make.com webhook'ga yuborishda xatolik: {wb_err}")
 
     if original_message.photo or original_message.video:
       old_caption = original_message.caption or ""
@@ -435,7 +435,7 @@ async def approve_callback(callback: CallbackQuery):
     await callback.answer("Post muvaffaqiyatli kanalga joylandi!")
 
   except Exception as e:
-    logging.error(f"Kanalga joylashda xato: {e}")
+    print(f"❌ Kanalga joylashda xato: {e}")
     await callback.answer(f"Xatolik yuz berdi: {e}", show_alert=True)
 
 
@@ -458,25 +458,31 @@ async def manual_channel_photo_post(message: types.Message):
             timeout=15,
         )
   except Exception as e:
-    logging.error(
-        f"Qo'lda yozilgan kanal fotosini webhook'ga yuborishda xato: {e}"
-    )
+    print(f"❌ Qo'lda yozilgan kanal fotosini yuborishda xato: {e}")
 
 
 # --- TELEGRAM BOTNI FONDAGI OQIMDA ISHGA TUSHIRISH ---
 def run_telegram_bot():
-  async def start():
-    await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+  import time
+  time.sleep(3)  # Flask server portni ochib olishi uchun 3 soniya kutamiz
+  try:
+    print("🤖 Telegram botni ishga tushirish boshlandi...")
 
-  asyncio.run(start())
+    async def start():
+      await bot.delete_webhook(drop_pending_updates=True)
+      print("✅ Bot polling (xabarlarni kutish) rejimiga muvaffaqiyatli o'tdi!")
+      await dp.start_polling(bot)
+
+    asyncio.run(start())
+  except Exception as e:
+    print(f"❌ TELEGRAM BOTDA XATOLIK CHIQDI: {e}")
 
 
 if __name__ == "__main__":
-  # 1. Botni alohida fonda (thread) ishga tushiramiz
+  print("🚀 Dastur boshlandi, bot thread'i ochilmoqda...")
   bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
   bot_thread.start()
 
-  # 2. Flask asosiy oqimda ishlaydi va Render talab qilgan portni DARXOL ochadi!
   port = int(os.environ.get("PORT", 10000))
+  print(f"🌐 Flask server {port}-portda ishga tushirilmoqda...")
   app.run(host="0.0.0.0", port=port)
