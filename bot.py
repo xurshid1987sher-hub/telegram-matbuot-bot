@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 from aiogram import Bot, Dispatcher, F, types
@@ -27,8 +28,35 @@ MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/ugqus96xbf3sk6l9x49etv6h0kuo3cjq"
 # Adminlar ID raqamlari
 ADMIN_IDS = [182763217, 466061710, 1681513161]
 
-admin_posts = {}
+DB_FILE = "posts.json"
 published_posts = set()
+
+
+# Ma'lumotlarni fayldan o'qish
+def load_posts():
+  if os.path.exists(DB_FILE):
+    try:
+      with open(DB_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        # Kalitlarni qaytadan tuple (admin_id, msg_id) ga o'tkazamiz
+        return {eval(k): v for k, v in data.items()}
+    except Exception:
+      return {}
+  return {}
+
+
+# Ma'lumotlarni faylga saqlash
+def save_posts():
+  try:
+    # Tuple kalitlarni string ko'rinishiga o'tkazib saqlaymiz
+    data = {str(k): v for k, v in admin_posts.items()}
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+      json.dump(data, f, ensure_ascii=False, indent=4)
+  except Exception as e:
+    print(f"❌ Faylga saqlashda xato: {e}")
+
+
+admin_posts = load_posts()
 
 # Loggingni sozlash
 logging.basicConfig(level=logging.INFO)
@@ -43,7 +71,6 @@ FOOTER = """💻 maktab matbuot xizmati
 
 🌐 <a href="https://t.me/PMIyozyovon">Telegram</a> | <a href="https://www.facebook.com/YozyovonIM">Facebook</a> | <a href="http://instagram.com/yozyovon_im">Instagram</a>"""
 
-# Doimiy pastda chiqib turadigan Start tugmasi
 start_reply_kb = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="/start")]], resize_keyboard=True
 )
@@ -297,6 +324,9 @@ async def process_post_text(message: Message, state: FSMContext):
       except Exception as e:
         print(f"❌ Admin {admin_id} ga yuborishda xato: {e}")
 
+    # Faylga saqlaymiz
+    save_posts()
+
     await message.answer(
         "✅ Post muvaffaqiyatli tayyorlandi va **adminlar ko'rigiga** yuborildi!",
         reply_markup=start_reply_kb,
@@ -332,7 +362,9 @@ async def approve_callback(callback: CallbackQuery):
 
     if not post_data:
       await callback.answer(
-          "Xatolik: Post ma'lumotlari topilmadi.", show_alert=True
+          "Xatolik: Post ma'lumotlari topilmadi (server qayta ishga"
+          " tushgan").",
+          show_alert=True,
       )
       return
 
@@ -470,10 +502,7 @@ async def start_web_server():
 
 
 async def main():
-  # 1. Veb-serverni ishga tushiramiz (Render port talabini qondiradi)
   await start_web_server()
-
-  # 2. Telegram botni polling rejimida ishga tushiramiz
   await bot.delete_webhook(drop_pending_updates=True)
   print("🤖 Telegram bot polling rejimiga o'tdi va ishlayapti!")
   await dp.start_polling(bot)
