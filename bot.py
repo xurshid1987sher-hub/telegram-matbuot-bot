@@ -38,7 +38,6 @@ def load_posts():
     try:
       with open(DB_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
-        # Kalitlarni qaytadan tuple (admin_id, msg_id) ga o'tkazamiz
         return {eval(k): v for k, v in data.items()}
     except Exception:
       return {}
@@ -48,7 +47,6 @@ def load_posts():
 # Ma'lumotlarni faylga saqlash
 def save_posts():
   try:
-    # Tuple kalitlarni string ko'rinishiga o'tkazib saqlaymiz
     data = {str(k): v for k, v in admin_posts.items()}
     with open(DB_FILE, "w", encoding="utf-8") as f:
       json.dump(data, f, ensure_ascii=False, indent=4)
@@ -324,7 +322,6 @@ async def process_post_text(message: Message, state: FSMContext):
       except Exception as e:
         print(f"❌ Admin {admin_id} ga yuborishda xato: {e}")
 
-    # Faylga saqlaymiz
     save_posts()
 
     await message.answer(
@@ -362,9 +359,7 @@ async def approve_callback(callback: CallbackQuery):
 
     if not post_data:
       await callback.answer(
-          "Xatolik: Post ma'lumotlari topilmadi (server qayta ishga"
-          " tushgan").",
-          show_alert=True,
+          "Xatolik: Post ma'lumotlari topilmadi.", show_alert=True
       )
       return
 
