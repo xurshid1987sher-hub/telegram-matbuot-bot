@@ -22,17 +22,13 @@ import requests
 BOT_TOKEN = "9003948892:AAG27bYVJuEYganhBjm90FODFKFxwvmQxzI"
 CHANNEL_USERNAME = -1001444808482  # Post boradigan kanal
 
-# Make.com'dan olgan Webhook manzilingiz (faqat rasmlar uchun ishlatiladi):
 MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/ugqus96xbf3sk6l9x49etv6h0kuo3cjq"
-
-# Adminlar ID raqamlari
 ADMIN_IDS = [182763217, 466061710, 1681513161]
 
 DB_FILE = "posts.json"
 published_posts = set()
 
 
-# Ma'lumotlarni fayldan o'qish
 def load_posts():
   if os.path.exists(DB_FILE):
     try:
@@ -44,7 +40,6 @@ def load_posts():
   return {}
 
 
-# Ma'lumotlarni faylga saqlash
 def save_posts():
   try:
     data = {str(k): v for k, v in admin_posts.items()}
@@ -56,7 +51,6 @@ def save_posts():
 
 admin_posts = load_posts()
 
-# Loggingni sozlash
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=BOT_TOKEN)
@@ -141,6 +135,7 @@ async def process_photos(message: Message, state: FSMContext):
   photos.append(photo_file_id)
   await state.update_data(media_type="photo", photos=photos)
 
+  # Agar bu birinchi rasm bo'lsa yoki tugma chiqarilmagan bo'lsa, bitta tugma chiqaramiz
   keyboard = InlineKeyboardMarkup(
       inline_keyboard=[
           [InlineKeyboardButton(text="Tayyor ✅", callback_data="finish_media")]
@@ -149,9 +144,8 @@ async def process_photos(message: Message, state: FSMContext):
   await message.answer(
       f"Rasm qabul qilindi ({len(photos)}/10). Yana rasm yuborishingiz yoki"
       " tugmani bosishingiz mumkin:",
-      reply_markup=start_reply_kb,
+      reply_markup=keyboard,
   )
-  await message.answer("Tasdiqlash uchun bosing:", reply_markup=keyboard)
 
 
 @dp.message(PostForm.waiting_for_media, F.video)
@@ -173,10 +167,9 @@ async def process_video(message: Message, state: FSMContext):
       ]
   )
   await message.answer(
-      "🎥 **Video qabul qilindi!** Davom etish uchun quyidagi tugmani bosing:",
-      reply_markup=start_reply_kb,
+      "🎥 **Video qabul qilindi!** Tasdiqlash uchun quyidagi tugmani bosing:",
+      reply_markup=keyboard,
   )
-  await message.answer("Tasdiqlash uchun bosing:", reply_markup=keyboard)
 
 
 @dp.callback_query(F.data == "finish_media")
@@ -392,7 +385,6 @@ async def approve_callback(callback: CallbackQuery):
         )
       return
 
-    # Kanalga chiqarish
     if media_type == "video":
       await bot.send_video(
           chat_id=CHANNEL_USERNAME,
@@ -422,7 +414,6 @@ async def approve_callback(callback: CallbackQuery):
 
     published_posts.add(post_unique_key)
 
-    # Make.com Webhook'ga yuborish (Faqat RASMLAR uchun)
     if MAKE_WEBHOOK_URL and "BURAGA" not in MAKE_WEBHOOK_URL:
       try:
         if media_type == "photo":
@@ -480,7 +471,6 @@ async def manual_channel_photo_post(message: types.Message):
     print(f"❌ Qo'lda yozilgan kanal fotosini yuborishda xato: {e}")
 
 
-# --- AIOHTTP WEB SERVER (PORT UCHUN) ---
 async def handle_ping(request):
   return web.Response(text="Bot is active and running 24/7!")
 
