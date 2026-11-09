@@ -154,25 +154,27 @@ async def process_video(message: Message, state: FSMContext):
   await message.answer("Tasdiqlash uchun bosing:", reply_markup=keyboard)
 
 
-@dp.callback_query(F.data == "finish_media", PostForm.waiting_for_media)
+@dp.callback_query(F.data == "finish_media")
 async def finish_media_callback(callback: CallbackQuery, state: FSMContext):
   data = await state.get_data()
   media_type = data.get("media_type")
   photos = data.get("photos", [])
   video_id = data.get("video_id")
 
-  if not media_type or (media_type == "photo" and not photos) or (
-      media_type == "video" and not video_id
-  ):
-    await callback.answer(
-        "Hech qanday rasm yoki video yubormadingiz!", show_alert=True
-    )
-    return
-
   try:
     await callback.message.edit_reply_markup(reply_markup=None)
   except Exception:
     pass
+
+  if not media_type or (media_type == "photo" and not photos) or (
+      media_type == "video" and not video_id
+  ):
+    await callback.answer(
+        "Bu tugma allaqachon ishlatilgan yoki ma'lumotlar topilmadi. Iltimos,"
+        " /start ni bosing.",
+        show_alert=True,
+    )
+    return
 
   await callback.message.answer(
       "Qabul qilindi! Endi **tadbir nomini** yuboring:", reply_markup=start_reply_kb
