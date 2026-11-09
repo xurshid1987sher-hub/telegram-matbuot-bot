@@ -37,13 +37,13 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# --- RENDER WEB SERVER (PORT UCHUN) ---
+# --- FLASK WEB SERVER (Render port talabini qondirish uchun) ---
 app = Flask(__name__)
 
 
 @app.route("/")
 def home():
-  return "Bot is active!"
+  return "Bot is active and running 24/7!"
 
 
 HASHTAG = "#yozyovon_tuman_ixtisoslaştirilgan_maktabi"
@@ -463,18 +463,20 @@ async def manual_channel_photo_post(message: types.Message):
     )
 
 
-async def main():
-  # Flask serverni alohida oqimda (thread) ishga tushiramiz
-  def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+# --- TELEGRAM BOTNI FONDAGI OQIMDA ISHGA TUSHIRISH ---
+def run_telegram_bot():
+  async def start():
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot)
 
-  server_thread = threading.Thread(target=run_flask, daemon=True)
-  server_thread.start()
-
-  await bot.delete_webhook(drop_pending_updates+True) if False else await bot.delete_webhook(drop_pending_updates=True)
-  await dp.start_polling(bot)
+  asyncio.run(start())
 
 
 if __name__ == "__main__":
-  asyncio.run(main())
+  # 1. Botni alohida fonda (thread) ishga tushiramiz
+  bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
+  bot_thread.start()
+
+  # 2. Flask asosiy oqimda ishlaydi va Render talab qilgan portni DARXOL ochadi!
+  port = int(os.environ.get("PORT", 10000))
+  app.run(host="0.0.0.0", port=port)
